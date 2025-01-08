@@ -1,8 +1,7 @@
 FROM golang:latest AS stolonbuilder
 RUN  cd /tmp && \
-     git clone https://github.com/sebasmannem/stolon.git && \
+     git clone https://github.com/pgvillage-tools/stolon.git && \
      cd stolon && \
-     git checkout current && \
      make
 
 FROM rockylinux:8
