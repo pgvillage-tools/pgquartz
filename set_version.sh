@@ -1,6 +1,6 @@
 #!/bin/bash
 set -x
-VERSION=$(echo $GITHUB_REF | cut -d / -f 3)
+VERSION="$(echo "${GITHUB_REF}" | cut -d / -f 3)"
 if [ -z "${VERSION}" ]; then
 	VERSION=$(git tag | sort -V | grep '^v' | tail -n1)-devel
 fi
