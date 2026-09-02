@@ -31,7 +31,7 @@ func (r Result) AsStringArray(params ...string) (arraysOfStrings []string) {
 		var cols []string
 		for i, col := range row {
 			cols = append(cols, fmt.Sprintf("{%s}={%s}", r.header[i],
-				strings.Replace(col, "'", "''", -1)))
+				strings.ReplaceAll(col, "'", "''")))
 		}
 		arraysOfStrings = append(arraysOfStrings, strings.Join(cols, delimiter))
 	}
