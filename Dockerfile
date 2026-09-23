@@ -2,9 +2,10 @@ FROM --platform=${BUILDPLATFORM} golang:alpine AS quartzbuilder
 WORKDIR /usr/src/app
 
 COPY . .
-RUN sh set_version.sh && \
-    go mod tidy -compat=1.17 && \
-    go build -o ./bin/pgquartz ./cmd/pgquartz
+
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} \
+    go build -v -a \
+    -ldflags="-X 'github.com/pgvillage-tools/pgquartz/cmd.Version=$VERSION'" -o ./bin/pgquartz ./cmd/pgquartz
 
 FROM alpine/git
 
