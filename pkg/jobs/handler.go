@@ -52,10 +52,7 @@ func (h *Handler) RunSteps() {
 	log.Info("Initializing runners")
 	h.initRunners()
 	log.Info("Waiting for all work to be scheduled")
-	for {
-		if !h.newWork() {
-			break
-		}
+	for h.newWork() {
 		h.processDone()
 	}
 	close(h.ToDo)

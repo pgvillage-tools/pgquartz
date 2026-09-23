@@ -98,7 +98,8 @@ func (gf Folder) IsEmpty() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer f.Close()
+	// TODO: In the future we probably want the logger and log on error
+	defer func() { _ = f.Close() }()
 
 	_, err = f.Readdirnames(1) // Or f.Readdir(1)
 	if err == io.EOF {

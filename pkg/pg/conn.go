@@ -10,7 +10,8 @@ import (
 )
 
 var (
-	UnexpctedRole = fmt.Errorf("we are connected to a database with another role then wished for")
+	// ErrUnexpectedRole is raised when we are connected to a database with an unexpected role
+	ErrUnexpectedRole = fmt.Errorf("we are connected to a database with another role then wished for")
 )
 
 type Conn struct {
@@ -57,7 +58,7 @@ func (c *Conn) UserName() (userName string) {
 
 // connectStringValue uses proper quoting for connect string values
 func connectStringValue(objectName string) (escaped string) {
-	return fmt.Sprintf("'%s'", strings.Replace(objectName, "'", "\\'", -1))
+	return fmt.Sprintf("'%s'", strings.ReplaceAll(objectName, "'", "\\'"))
 }
 
 func (c *Conn) DSN() (dsn string) {
@@ -117,7 +118,7 @@ func (c *Conn) GetOneField(query string, args ...interface{}) (answer string, er
 
 	err = c.conn.QueryRow(ctx, query, args...).Scan(&answer)
 	if err != nil {
-		return "", fmt.Errorf("runQueryGetOneField (%s) failed: %v\n", query, err)
+		return "", fmt.Errorf("runQueryGetOneField (%s) failed: %v", query, err)
 	}
 	return answer, nil
 }
@@ -164,7 +165,7 @@ func (c *Conn) VerifyRole(expected string) error {
 		return err
 	} else if role != expected {
 		log.Debugf("actual role %s != expected role %s", role, expected)
-		return UnexpctedRole
+		return ErrUnexpectedRole
 	}
 	log.Debugf("actual role is as expected %s", expected)
 	return nil
