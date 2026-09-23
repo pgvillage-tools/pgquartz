@@ -1,6 +1,12 @@
+PROJDIR=$(dir $(realpath $(firstword $(MAKEFILE_LIST))))
+REPO_PATH=github.com/pgvillage-tools/PgQuartz
 JOB ?= jobs/jobspec1/job.yml
 
 PGVERSION ?= 18
+
+VERSION ?= $(shell scripts/git-version.sh)
+
+LD_FLAGS="-w -X $(REPO_PATH)/internal/appVersion=$(VERSION)"
 
 uname_p := $(shell uname -p) # store the output of the command in a variable
 
@@ -18,6 +24,13 @@ $(shell mkdir -p bin )
 # scaffolded by default. However, you might want to replace it to use other
 # tools. (i.e. podman)
 CONTAINER_TOOL ?= docker
+
+.PHONY: all
+all: build
+
+.PHONY: build
+build:
+	go build -ldflags $(LD_FLAGS) -o $(PROJDIR)/bin/pgquartz ./cmd/pgquartz
 
 build_dlv:
 	go get github.com/go-delve/delve/cmd/dlv@latest
@@ -42,7 +55,7 @@ fmt:
 
 .PHONY: test
 test:
-	go test $$(go list ./... | grep -v github.com/pgvillage-tools/pgquartz/tests) -coverprofile cover.out -coverpkg=./...
+	go test $$(go list ./... | grep -v $(REPO_PATH)/tests) -coverprofile cover.out -coverpkg=./...
 
 .PHONY: install-go-test-coverage
 install-go-test-coverage:

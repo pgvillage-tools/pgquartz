@@ -11,10 +11,11 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	apiv1 "github.com/pgvillage-tools/orion/api/v1"
-	endpoints "github.com/pgvillage-tools/orion/internal/api_endpoints"
-	"github.com/pgvillage-tools/orion/internal/util"
 	client "github.com/pgvillage-tools/orion/pkg/api_client"
+	endpoints "github.com/pgvillage-tools/orion/pkg/api_endpoints"
+
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/etcd"
 	"github.com/testcontainers/testcontainers-go/network"
@@ -48,7 +49,7 @@ var _ = Describe("Smoke", Ordered, func() {
 			"password": pgPassword,
 			"dbname":   pgDatabase,
 		}
-		autoRemove = (os.Getenv("ORION_TEST_KEEP") != "true")
+		autoRemove = (os.Getenv("PGQUARTZ_TEST_KEEP") != "true")
 	)
 
 	BeforeAll(func() {
@@ -82,11 +83,11 @@ var _ = Describe("Smoke", Ordered, func() {
 		Ω(err).NotTo(HaveOccurred())
 		apiClient = client.NewConnection(endpoints.HTTP, localHost, port.Num(), time.Second)
 		httpCode, initErr := apiClient.PostClusterSpec(&apiv1.Spec{
-			// DefaultSUReplAccessMode: util.ToPtr(apiv1.SUReplAccessStrict),
-			DefaultSUReplAccessMode: util.ToPtr(apiv1.SUReplAccessAll),
+			// DefaultSUReplAccessMode: toPtr(apiv1.SUReplAccessStrict),
+			DefaultSUReplAccessMode: toPtr(apiv1.SUReplAccessAll),
 			PGParameters:            apiv1.PGParameters{},
 			PGHBA:                   []string{},
-			InitMode:                util.ToPtr(apiv1.New),
+			InitMode:                toPtr(apiv1.New),
 		},
 		)
 

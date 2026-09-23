@@ -14,6 +14,7 @@ import (
 )
 
 const (
+	orionImageRepo     = "ghcr.io/pgvillage-tools/pgvillage-tools/orion"
 	etcdImage          = "quay.io/coreos/etcd:v3.6.7"
 	apiInternalPort    = 8080
 	proxyInternalPort  = 25432
@@ -51,27 +52,6 @@ func runEtcd(
 	return etcdContainer, fmt.Sprintf("http://%s:2379", ips[0]), nil
 }
 
-func runOrionCli(
-	ctx context.Context,
-	etcdEndpoints string,
-	nw *testcontainers.DockerNetwork,
-	command ...string,
-) (testcontainers.Container, error) {
-	return testcontainers.GenericContainer(
-		ctx, testcontainers.GenericContainerRequest{
-			ContainerRequest: testcontainers.ContainerRequest{
-				Cmd: command,
-				Env: map[string]string{
-					"ORIONCLI_STORE_ENDPOINTS": etcdEndpoints,
-					"ORIONCLI_LOG_LEVEL":       "debug",
-				},
-				Networks: []string{nw.Name},
-				Image:    "cli",
-			},
-			Started: true,
-		})
-}
-
 func runKeeper(
 	ctx context.Context,
 	etcdEndpoints string,
@@ -92,7 +72,7 @@ func runKeeper(
 			strings.ReplaceAll(strings.ToUpper(k), "-", "_"))
 		envSettings[k] = v
 	}
-	image := fmt.Sprintf("keeper-%s", pgVersion)
+	image := fmt.Sprintf("%s/keeper-%s", orionImageRepo, pgVersion)
 	fmt.Fprintf(GinkgoWriter, "DEBUG - Keeper image: %s", image)
 	return testcontainers.GenericContainer(
 		ctx, testcontainers.GenericContainerRequest{
@@ -113,6 +93,7 @@ func runSentinel(
 	etcdEndpoints string,
 	nw *testcontainers.DockerNetwork,
 ) (testcontainers.Container, error) {
+	image := fmt.Sprintf("%s/sentinel", orionImageRepo)
 	return testcontainers.GenericContainer(
 		ctx, testcontainers.GenericContainerRequest{
 			ContainerRequest: testcontainers.ContainerRequest{
@@ -122,7 +103,7 @@ func runSentinel(
 				},
 				Networks:   []string{nw.Name},
 				ExtraHosts: []string{},
-				Image:      "sentinel",
+				Image:      image,
 			},
 			Started: true,
 		})
@@ -138,11 +119,12 @@ func runProxy(
 		"ORIONPROXY_STORE_ENDPOINTS": etcdEndpoints,
 		"ORIONPROXY_LOG_LEVEL":       "debug",
 	}
+	image := fmt.Sprintf("%s/proxy", orionImageRepo)
 	return testcontainers.GenericContainer(
 		ctx, testcontainers.GenericContainerRequest{
 			ContainerRequest: testcontainers.ContainerRequest{
 				Env:            envSettings,
-				Image:          "proxy",
+				Image:          image,
 				Networks:       []string{nw.Name},
 				NetworkAliases: aliasses,
 				WaitingFor: wait.ForLog(
@@ -164,11 +146,12 @@ func runAPI(
 		"ORIONAPI_STORE_ENDPOINTS": etcdEndpoints,
 		"ORIONAPI_LOG_LEVEL":       "debug",
 	}
+	image := fmt.Sprintf("%s/api", orionImageRepo)
 	return testcontainers.GenericContainer(
 		ctx, testcontainers.GenericContainerRequest{
 			ContainerRequest: testcontainers.ContainerRequest{
 				Env:            envSettings,
-				Image:          "api",
+				Image:          image,
 				Networks:       []string{nw.Name},
 				NetworkAliases: aliasses,
 				WaitingFor: wait.ForLog(
