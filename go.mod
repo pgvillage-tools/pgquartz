@@ -1,4 +1,4 @@
-module github.com/mannemsolutions/PgQuartz
+module github.com/pgvillage-tools/PgQuartz
 
 go 1.26.0
 

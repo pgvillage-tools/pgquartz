@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mannemsolutions/PgQuartz/pkg/pg"
+	"github.com/pgvillage-tools/PgQuartz/pkg/pg"
 )
 
 type Connections map[string]pg.Conn

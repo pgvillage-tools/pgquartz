@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 
-	"github.com/mannemsolutions/PgQuartz/internal"
-	"github.com/mannemsolutions/PgQuartz/pkg/etcd"
-	"github.com/mannemsolutions/PgQuartz/pkg/jobs"
-	"github.com/mannemsolutions/PgQuartz/pkg/pg"
+	"github.com/pgvillage-tools/PgQuartz/internal"
+	"github.com/pgvillage-tools/PgQuartz/pkg/etcd"
+	"github.com/pgvillage-tools/PgQuartz/pkg/jobs"
+	"github.com/pgvillage-tools/PgQuartz/pkg/pg"
 )
 
 var (

@@ -3,11 +3,11 @@ package main
 import (
 	"os"
 
-	"github.com/mannemsolutions/PgQuartz/pkg/git"
+	"github.com/pgvillage-tools/PgQuartz/pkg/git"
 
-	"github.com/mannemsolutions/PgQuartz/pkg/etcd"
-	"github.com/mannemsolutions/PgQuartz/pkg/jobs"
-	"github.com/mannemsolutions/PgQuartz/pkg/pg"
+	"github.com/pgvillage-tools/PgQuartz/pkg/etcd"
+	"github.com/pgvillage-tools/PgQuartz/pkg/jobs"
+	"github.com/pgvillage-tools/PgQuartz/pkg/pg"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )

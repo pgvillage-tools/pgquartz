@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mannemsolutions/PgQuartz/pkg/jobs"
+	"github.com/pgvillage-tools/PgQuartz/pkg/jobs"
 	"gopkg.in/yaml.v2"
 )
 

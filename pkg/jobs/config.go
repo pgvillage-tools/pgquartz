@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mannemsolutions/PgQuartz/pkg/etcd"
-	"github.com/mannemsolutions/PgQuartz/pkg/git"
+	"github.com/pgvillage-tools/PgQuartz/pkg/etcd"
+	"github.com/pgvillage-tools/PgQuartz/pkg/git"
 	"gopkg.in/yaml.v2"
 )
 
