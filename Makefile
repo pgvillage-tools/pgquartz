@@ -1,21 +1,27 @@
 JOB ?= jobs/jobspec1/job.yml
 
+PGVERSION ?= 18
+
 uname_p := $(shell uname -p) # store the output of the command in a variable
 
-build: build_pgquartz
+# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
+ifeq (,$(shell go env GOBIN))
+GOBIN=$(shell go env GOPATH)/bin
+else
+GOBIN=$(shell go env GOBIN)
+endif
 
-build_pgquartz:
-	bash ./set_version.sh
-	go mod tidy -compat=1.17
-	go build -o ./bin/pgquartz ./cmd/pgquartz
-	ln -f ./bin/pgquartz ./bin/pgquartz.$(uname_p)
+$(shell mkdir -p bin )
+
+# CONTAINER_TOOL defines the container tool to be used for building images.
+# Be aware that the target commands are only tested with Docker which is
+# scaffolded by default. However, you might want to replace it to use other
+# tools. (i.e. podman)
+CONTAINER_TOOL ?= docker
 
 build_dlv:
 	go get github.com/go-delve/delve/cmd/dlv@latest
 	go build -o /bin/dlv.$(uname_p) github.com/go-delve/delve/cmd/dlv
-
-build_image:
-	docker build . --tag mannemsolutions/pgquartz
 
 # Use the following on m1:
 # alias make='/usr/bin/arch -arch arm64 /usr/bin/make'
@@ -34,14 +40,19 @@ fmt:
 	goimports -w .
 	gci write .
 
-compose:
-	./docker-compose-tests.sh
+.PHONY: test
+test:
+	go test $$(go list ./... | grep -v github.com/pgvillage-tools/pgquartz/tests) -coverprofile cover.out -coverpkg=./...
 
-test: gotest sec lint
+.PHONY: install-go-test-coverage
+install-go-test-coverage:
+	go install github.com/vladopajic/go-test-coverage/v2@latest
 
-sec:
-	gosec ./...
-lint:
-	golangci-lint run
-gotest:
-	go test -v ./...
+.PHONY: check-coverage
+check-coverage: install-go-test-coverage test
+	${GOBIN}/go-test-coverage --config=./.testcoverage.yaml
+
+.PHONY: e2e-test
+e2e-test:
+	cd ./tests/smoke && PGVERSION=$(PGVERSION) go test -count=1 -v ./...
+
