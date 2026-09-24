@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	orionImageRepo     = "ghcr.io/pgvillage-tools/pgvillage-tools/orion"
+	orionImageRepo     = "ghcr.io/pgvillage-tools/orion"
 	etcdImage          = "quay.io/coreos/etcd:v3.6.7"
 	apiInternalPort    = 8080
 	proxyInternalPort  = 25432
