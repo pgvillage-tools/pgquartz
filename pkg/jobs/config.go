@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Config holds the job definition as read from the config file.
 type Config struct {
 	Git            git.Config  `yaml:"git"`
 	Steps          Steps       `yaml:"steps"`
@@ -28,13 +30,14 @@ type Config struct {
 }
 
 func (c Config) String() string {
-	if yamlConfig, err := yaml.Marshal(&c); err != nil {
+	yamlConfig, err := yaml.Marshal(&c)
+	if err != nil {
 		return ""
-	} else {
-		return string(yamlConfig)
 	}
+	return string(yamlConfig)
 }
 
+// Verify checks the config and panics if it has problems.
 func (c Config) Verify() {
 	var errs []error
 	if c.Parallel < 0 {
@@ -44,7 +47,7 @@ func (c Config) Verify() {
 		// Not using uint, because we only loop through this and don;t want to convert to int in the loop...
 		errs = append(errs, fmt.Errorf("invalid value for Parallel %d", c.Parallel))
 	} else if len(c.Steps) < 1 {
-		errs = append(errs, fmt.Errorf("please define at least one step"))
+		errs = append(errs, errors.New("please define at least one step"))
 	} else {
 		errs = append(errs, c.Steps.Verify(c.Conns)...)
 	}
@@ -56,11 +59,13 @@ func (c Config) Verify() {
 	}
 }
 
+// Initialize applies defaults to the git config and sets up the step instances.
 func (c *Config) Initialize() {
 	c.Git.Initialize(git.Folder(c.Workdir))
 	c.Steps.Initialize()
 }
 
+// GetTimeoutContext returns a context that is cancelled after the configured job timeout.
 func (c Config) GetTimeoutContext(parentContext context.Context) (context.Context, context.CancelFunc) {
 	if c.Timeout == "" {
 		return parentContext, nil

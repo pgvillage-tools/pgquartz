@@ -28,9 +28,10 @@ var (
 	configFile string
 )
 
+// ProcessFlags parses the command line flags and resolves the path to the config file.
 func ProcessFlags() (err error) {
 	if configFile != "" {
-		return
+		return nil
 	}
 
 	flag.BoolVar(&debug, "d", false, "Add debugging output")
@@ -41,7 +42,7 @@ func ProcessFlags() (err error) {
 	flag.Parse()
 
 	if version {
-		//nolint
+		//nolint:forbidigo // printing the version is intended
 		fmt.Println(appVersion)
 		os.Exit(0)
 	}
@@ -54,9 +55,10 @@ func ProcessFlags() (err error) {
 	return err
 }
 
+// NewConfig reads the config file and returns the resulting job config.
 func NewConfig() (config jobs.Config, err error) {
 	if err = ProcessFlags(); err != nil {
-		return
+		return config, err
 	}
 
 	// This only parsed as yaml, nothing else
@@ -74,15 +76,18 @@ func NewConfig() (config jobs.Config, err error) {
 		config.Workdir = dir
 	}
 
-	if config.LogFile == "" {
-		// If it is emptystring, then don't do fancy stuff with stat on it
-	} else if fileInfo, err := os.Stat(config.LogFile); err != nil {
-		return config, err
-	} else if fileInfo.IsDir() {
-		// is a directory
-		t := time.Now()
-		logFileName := fmt.Sprintf("%s_%s.log", t.Format("2006-01-02"), jobName)
-		config.LogFile = filepath.Join(config.LogFile, logFileName)
+	// If it is emptystring, then don't do fancy stuff with stat on it
+	if config.LogFile != "" {
+		fileInfo, statErr := os.Stat(config.LogFile)
+		if statErr != nil {
+			return config, statErr
+		}
+		if fileInfo.IsDir() {
+			// is a directory
+			t := time.Now()
+			logFileName := fmt.Sprintf("%s_%s.log", t.Format("2006-01-02"), jobName)
+			config.LogFile = filepath.Join(config.LogFile, logFileName)
+		}
 	}
 	if config.EtcdConfig.LockKey == "" {
 		config.EtcdConfig.LockKey = jobName

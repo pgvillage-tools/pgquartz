@@ -11,8 +11,41 @@ import (
 	"syscall"
 )
 
+const (
+	tmpFileMode   = 0o600
+	ownerExecBit  = 0o100
+	groupExecBit  = 0o010
+	othersExecBit = 0o001
+)
+
+// verifyScriptFile checks that the script file exists and is executable by the current user.
+func verifyScriptFile(file string) error {
+	info, err := os.Stat(file)
+	if err != nil {
+		return err
+	}
+	// Check file is executable by me
+	// Requires a fix for Windows...
+	mode := info.Mode()
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		return fmt.Errorf("could not determine owner of script file %s", file)
+	}
+	if mode&othersExecBit != 0 {
+		return nil
+	} else if mode&ownerExecBit != 0 && int(stat.Uid) == os.Getuid() {
+		return nil
+	} else if mode&groupExecBit != 0 && int(stat.Gid) == os.Getgid() {
+		return nil
+	}
+	return fmt.Errorf("script file %s is not executable by me (uid: %d, gid: %d)", file, os.Getuid(),
+		os.Getgid())
+}
+
+// Commands is a list of Command pointers
 type Commands []*Command
 
+// Verify checks all commands and returns the problems found.
 func (cs Commands) Verify(stepName string, conns Connections) (errs []error) {
 	for _, command := range cs {
 		errs = append(errs, command.Verify(stepName, conns)...)
@@ -20,6 +53,7 @@ func (cs Commands) Verify(stepName string, conns Connections) (errs []error) {
 	return errs
 }
 
+// Run runs all commands in order and stops at the first error.
 func (cs *Commands) Run(conns Connections, args InstanceArguments) (err error) {
 	for _, command := range *cs {
 		if err = command.Run(conns, args); err != nil {
@@ -29,6 +63,7 @@ func (cs *Commands) Run(conns Connections, args InstanceArguments) (err error) {
 	return nil
 }
 
+// Clone will clone a Commands list
 func (cs Commands) Clone() (clone Commands) {
 	for _, c := range cs {
 		clone = append(clone, c.Clone())
@@ -36,6 +71,7 @@ func (cs Commands) Clone() (clone Commands) {
 	return clone
 }
 
+// Rc returns the sum of the return codes of all commands.
 func (cs Commands) Rc() (rc int) {
 	for _, command := range cs {
 		rc += command.Rc
@@ -43,6 +79,7 @@ func (cs Commands) Rc() (rc int) {
 	return rc
 }
 
+// StdOut returns the combined stdout of all commands.
 func (cs Commands) StdOut() (stdOut Result) {
 	for _, command := range cs {
 		stdOut = append(stdOut, command.stdOut...)
@@ -50,6 +87,7 @@ func (cs Commands) StdOut() (stdOut Result) {
 	return stdOut
 }
 
+// StdErr returns the combined stderr of all commands.
 func (cs Commands) StdErr() (stdErr Result) {
 	for _, command := range cs {
 		stdErr = append(stdErr, command.stdErr...)
@@ -57,6 +95,7 @@ func (cs Commands) StdErr() (stdErr Result) {
 	return stdErr
 }
 
+// Command is a shell script or query that is run as part of a step.
 type Command struct {
 	// Home (~) is not resolved
 	File      string `yaml:"file,omitempty"`
@@ -65,12 +104,13 @@ type Command struct {
 	Type      string `yaml:"type"`
 	Inline    string `yaml:"inline,omitempty"`
 	BatchMode bool   `yaml:"batchMode"`
-	stdOut    Result `yaml:"-"`
-	stdErr    Result `yaml:"-"`
-	Rc        int    `yaml:"-"`
+	stdOut    Result
+	stdErr    Result
+	Rc        int `yaml:"-"`
 	tmpFile   string
 }
 
+// Clone returns a copy of the command without its run results.
 func (c Command) Clone() *Command {
 	return &Command{
 		Name:      c.Name,
@@ -93,6 +133,7 @@ func (c Command) String() string {
 	return fmt.Sprintf("name='%s', type=%s, %s", strings.Replace(c.Name, "'", "''", -1), c.Type, cmd)
 }
 
+// VerifyScriptFile checks that the script file of a shell command exists and is executable.
 func (c Command) VerifyScriptFile() (err error) {
 	if c.Inline != "" {
 		return nil
@@ -100,40 +141,26 @@ func (c Command) VerifyScriptFile() (err error) {
 	if c.Type != "shell" {
 		return nil
 	}
-	// Check file exists
-	if info, err := os.Stat(c.File); err != nil {
-		return err
-	} else {
-		// Check file is executable by me
-		// Requires a fix for Windows...
-		mode := info.Mode()
-		stat := info.Sys().(*syscall.Stat_t)
-		if mode&0001 != 0 {
-			return nil
-		} else if mode&0100 != 0 && int(stat.Uid) == os.Getuid() {
-			return nil
-		} else if mode&0010 != 0 && int(stat.Gid) == os.Getgid() {
-			return nil
-		}
-		return fmt.Errorf("script file %s is not executable by me (uid: %d, gid: %d)", c.File, os.Getuid(),
-			os.Getgid())
-	}
+	return verifyScriptFile(c.File)
 }
 
+// Verify checks the command against the defined connections and returns the problems found.
 func (c Command) Verify(stepName string, conns Connections) (errs []error) {
-	if c.Type == "" {
-		if len(conns) == 1 {
-			// This is fine. When only one, we use that.
-		} else {
+	switch c.Type {
+	case "":
+		// This is fine when only one connection is defined. We use that one.
+		if len(conns) != 1 {
 			errs = append(errs, fmt.Errorf(
 				"please reference a specific Type for step command %s.%s, or just define only one Connection",
 				stepName, c.Name))
 		}
-	} else if c.Type == "shell" {
+	case "shell":
 		// Special type shell for running shell commands instead of db connection
-	} else if _, exists := conns[c.Type]; !exists {
-		errs = append(errs, fmt.Errorf("step command %s.%s references an unknown Type %s", stepName,
-			c.Type, c.Name))
+	default:
+		if _, exists := conns[c.Type]; !exists {
+			errs = append(errs, fmt.Errorf("step command %s.%s references an unknown Type %s", stepName,
+				c.Type, c.Name))
+		}
 	}
 	if err := c.VerifyScriptFile(); err != nil {
 		errs = append(errs, err)
@@ -158,7 +185,7 @@ func (c *Command) ScriptFile() (scriptFile string) {
 		} else if err = tmpFile.Close(); err != nil {
 			log.Panicf("error closing the tmpfile: %e", err)
 			// os.Chmod should also work on Windows
-		} else if err = os.Chmod(tmpFile.Name(), 0600); err != nil {
+		} else if err = os.Chmod(tmpFile.Name(), tmpFileMode); err != nil {
 			log.Panicf("error making inline tempfile script executable: %e", err)
 		}
 		return c.tmpFile
@@ -187,6 +214,7 @@ func (c Command) ScriptBody() (string, error) {
 	return string(scriptBodyBytes), nil
 }
 
+// Run runs the command as a shell script or as a query on its connection.
 func (c *Command) Run(conns Connections, args InstanceArguments) (err error) {
 	log.Infof("Running command: %s, args: %s", c.String(), args.String())
 	if c.Type == "" || c.Type == "shell" {
@@ -201,6 +229,7 @@ func (c *Command) Run(conns Connections, args InstanceArguments) (err error) {
 	return nil
 }
 
+// CleanTempFile removes the temporary file created for an inline script.
 func (c *Command) CleanTempFile() {
 	if c.tmpFile != "" {
 		log.Debugf("removing tmp file %s", c.tmpFile)
@@ -211,6 +240,7 @@ func (c *Command) CleanTempFile() {
 	}
 }
 
+// RunOsCommand runs the command as a bash script and stores its output and return code.
 func (c *Command) RunOsCommand(args InstanceArguments) (err error) {
 	exCommand := exec.Command("/bin/bash", c.ScriptFile()) // #nosec
 	exCommand.Env = args.AsEnv()

@@ -2,11 +2,13 @@ package jobs
 
 import "os"
 
+// Work identifies a step instance that is scheduled or done.
 type Work struct {
 	Step   string
 	ArgKey string
 }
 
+// Handler schedules the steps of a job over its runners.
 type Handler struct {
 	Config  Config
 	Steps   Steps
@@ -15,6 +17,7 @@ type Handler struct {
 	Done    chan Work
 }
 
+// NewHandler returns a Handler for the given config.
 func NewHandler(c Config) Handler {
 	return Handler{
 		Config: c,
@@ -24,6 +27,7 @@ func NewHandler(c Config) Handler {
 	}
 }
 
+// VerifyConfig changes to the workdir and verifies the config.
 func (h *Handler) VerifyConfig() {
 	log.Debug("This is my config:\n", h.Config.String())
 	log.Debugf("Jumping to workdir %s", h.Config.Workdir)
@@ -34,6 +38,7 @@ func (h *Handler) VerifyConfig() {
 	h.Config.Verify()
 }
 
+// VerifyRoles checks that all connections have their expected role, unless runOnRoleError is set.
 func (h Handler) VerifyRoles() error {
 	if h.Config.RunOnRoleError {
 		log.Debugf("runOnRoleError not enabled")
@@ -48,6 +53,7 @@ func (h Handler) VerifyRoles() error {
 	return nil
 }
 
+// RunSteps runs all steps, respecting their dependencies, and waits for them to finish.
 func (h *Handler) RunSteps() {
 	log.Info("Initializing runners")
 	h.initRunners()
@@ -68,6 +74,7 @@ func (h *Handler) RunSteps() {
 	log.Info("All work is done")
 }
 
+// RunChecks runs all checks on the result of the job.
 func (h *Handler) RunChecks() {
 	if len(h.Config.Checks) == 0 {
 		return
@@ -115,7 +122,7 @@ func (h *Handler) processDone() {
 			h.Steps.InstanceFinished(doneInstance)
 		}
 	default:
-		//log.Infof("break")
+		// log.Infof("break")
 	}
 }
 
