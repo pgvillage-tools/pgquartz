@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// MatrixInstancePrefix is the prefix of the environment variables that hold the matrix arguments.
 const MatrixInstancePrefix = "PGQ_INSTANCE"
 
 // MatrixArgValues is an array for all the values that one MatrixArg could have
@@ -63,6 +64,7 @@ func (ias InstanceArguments) String() string {
 	return fmt.Sprintf("{ %s }", strings.Join(keyValues, ", "))
 }
 
+// Clone returns a copy of the instance arguments.
 func (ias InstanceArguments) Clone() (newMia InstanceArguments) {
 	newMia = make(InstanceArguments)
 	for key, value := range ias {
@@ -71,6 +73,7 @@ func (ias InstanceArguments) Clone() (newMia InstanceArguments) {
 	return newMia
 }
 
+// AsEnv returns the instance arguments as environment variables for shell commands.
 func (ias InstanceArguments) AsEnv() []string {
 	var env []string
 	for key, value := range ias {
@@ -102,6 +105,7 @@ func (ias InstanceArguments) ParseQuery(query string) (parsedQuery string, args 
 	return parsedQuery, args
 }
 
+// Explode combines every collected set of instance arguments with every value for key.
 func (mavs MatrixArgValues) Explode(key string, collected []InstanceArguments) (exploded []InstanceArguments) {
 	for _, value := range mavs {
 		for _, mia := range collected {
@@ -113,6 +117,7 @@ func (mavs MatrixArgValues) Explode(key string, collected []InstanceArguments) (
 	return exploded
 }
 
+// Instances returns all combinations of the matrix argument values.
 func (mas MatrixArgs) Instances() (ias []InstanceArguments) {
 	for arg, values := range mas {
 		if len(ias) == 0 {
