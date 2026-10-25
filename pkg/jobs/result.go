@@ -32,7 +32,7 @@ func (r Result) Append(additional Result) Result {
 func (r Result) String() string {
 	var lines []string
 	for _, line := range r {
-		lines = append(lines, fmt.Sprintf("'%s'", strings.Replace(string(line), "'", "''", -1)))
+		lines = append(lines, fmt.Sprintf("'%s'", strings.ReplaceAll(string(line), "'", "''")))
 	}
 	return fmt.Sprintf("[ %s ]", strings.Join(lines, ", "))
 }

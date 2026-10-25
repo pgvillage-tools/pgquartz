@@ -63,12 +63,12 @@ func (c Check) Clone() *Check {
 func (c Check) String() string {
 	var chk string
 	if c.Inline != "" {
-		chk = fmt.Sprintf("inline='%s'", strings.Replace(
-			strings.Replace(c.Inline, "\n", "\\n", -1), "'", "''", -1))
+		chk = fmt.Sprintf("inline='%s'", strings.ReplaceAll(
+			strings.ReplaceAll(c.Inline, "\n", "\\n"), "'", "''"))
 	} else {
 		chk = fmt.Sprintf("file=%s", c.File)
 	}
-	return fmt.Sprintf("name='%s', type=%s, %s", strings.Replace(c.Name, "'", "''", -1), c.Type, chk)
+	return fmt.Sprintf("name='%s', type=%s, %s", strings.ReplaceAll(c.Name, "'", "''"), c.Type, chk)
 }
 
 func (c Check) VerifyScriptFile() (err error) {

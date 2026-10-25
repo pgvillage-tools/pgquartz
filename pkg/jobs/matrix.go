@@ -51,8 +51,8 @@ func (ias InstanceArguments) String() string {
 	for key, value := range ias {
 		if len(key) > 0 {
 			keyValues = append(keyValues, fmt.Sprintf("'%s': '%s'",
-				strings.Replace(key, "'", "''", -1),
-				strings.Replace(value, "'", "''", -1),
+				strings.ReplaceAll(key, "'", "''"),
+				strings.ReplaceAll(value, "'", "''"),
 			))
 		}
 	}
@@ -89,7 +89,7 @@ func (ias InstanceArguments) ParseQuery(query string) (parsedQuery string, args 
 		if argName == "" {
 			continue
 		}
-		parsedQuery = strings.Replace(parsedQuery, fmt.Sprintf("${%s}", argName), argValue, -1)
+		parsedQuery = strings.ReplaceAll(parsedQuery, fmt.Sprintf("${%s}", argName), argValue)
 		if strings.Contains(parsedQuery, ":"+argName) {
 			parsedQuery = strings.ReplaceAll(parsedQuery, ":"+argName, fmt.Sprint(`$`, i))
 			args = append(args, argValue)

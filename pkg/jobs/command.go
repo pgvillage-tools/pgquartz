@@ -85,12 +85,12 @@ func (c Command) Clone() *Command {
 func (c Command) String() string {
 	var cmd string
 	if c.Inline != "" {
-		cmd = fmt.Sprintf("inline='%s'", strings.Replace(
-			strings.Replace(c.Inline, "\n", "\\n", -1), "'", "''", -1))
+		cmd = fmt.Sprintf("inline='%s'", strings.ReplaceAll(
+			strings.ReplaceAll(c.Inline, "\n", "\\n"), "'", "''"))
 	} else {
 		cmd = fmt.Sprintf("file=%s", c.File)
 	}
-	return fmt.Sprintf("name='%s', type=%s, %s", strings.Replace(c.Name, "'", "''", -1), c.Type, cmd)
+	return fmt.Sprintf("name='%s', type=%s, %s", strings.ReplaceAll(c.Name, "'", "''"), c.Type, cmd)
 }
 
 func (c Command) VerifyScriptFile() (err error) {

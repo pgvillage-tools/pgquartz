@@ -1,5 +1,11 @@
 JOB ?= jobs/jobspec1/job.yml
 
+ifeq (,$(shell go env GOBIN))
+GOBIN=$(shell go env GOPATH)/bin
+else
+GOBIN=$(shell go env GOBIN)
+endif
+
 uname_p := $(shell uname -p) # store the output of the command in a variable
 
 build: build_pgquartz
@@ -34,14 +40,26 @@ fmt:
 	goimports -w .
 	gci write .
 
+.PHONY: compose
 compose:
 	./docker-compose-tests.sh
 
-test: gotest sec lint
+.PHONY: test
+test:
+	go test -v $$(go list ./... | grep -v github.com/pgvillage-tools/orion/tests) -coverprofile cover.out -coverpkg=./...
 
+.PHONY: gosec
 sec:
 	gosec ./...
+
+.PHONY: lint
 lint:
 	golangci-lint run
-gotest:
-	go test -v ./...
+
+.PHONY: install-go-test-coverage
+install-go-test-coverage:
+	go install github.com/vladopajic/go-test-coverage/v2@latest
+
+.PHONY: check-coverage
+check-coverage: install-go-test-coverage test
+	${GOBIN}/go-test-coverage --config=./.testcoverage.yaml

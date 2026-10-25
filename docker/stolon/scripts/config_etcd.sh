@@ -23,7 +23,7 @@ ETCD_AUTO_COMPACTION_RETENTION=1"
 CLUSTER_SIZE=${CLUSTER_SIZE:-3}
 MYIP=$(ip a | grep -oE 'inet ([0-9]{1,3}\.){3}[0-9]{1,3}' | sed -e '/127\.0\.0\.1/d' -e 's/inet //')
 MYHOSTNAME=$(host "${MYIP}" | sed -e 's/.* //' -e 's/\..*//')
-MYHOSTNAMEPROFILE=$(echo $MYHOSTNAME | sed 's/[0-9]*$//')
-ETCD_INITIAL_CLUSTER=$(for ((i=1;i<=${CLUSTER_SIZE};i++)); do host "${MYHOSTNAMEPROFILE}${i}"; done | awk '{if (NR>1){printf(",")};printf("%s=http://%s:2380",$1,$4)}')
+MYHOSTNAMEPROFILE="${MYHOSTNAME//[0-9]*$/replace}"
+ETCD_INITIAL_CLUSTER=$(for ((i=1;i<="${CLUSTER_SIZE}";i++)); do host "${MYHOSTNAMEPROFILE}${i}"; done | awk '{if (NR>1){printf(",")};printf("%s=http://%s:2380",$1,$4)}')
 
 print_config

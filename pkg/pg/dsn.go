@@ -13,7 +13,7 @@ func (d Dsn) String(masked bool) string {
 		if k == "password" {
 			v = "*****"
 		}
-		parts = append(parts, fmt.Sprintf("%s=\"%s\"", k, strings.Replace(v, "\"", "\"\"", -1)))
+		parts = append(parts, fmt.Sprintf("%s=\"%s\"", k, strings.ReplaceAll(v, "\"", "\"\"")))
 	}
 	return strings.Join(parts, " ")
 }

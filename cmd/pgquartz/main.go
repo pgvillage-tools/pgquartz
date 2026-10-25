@@ -46,7 +46,7 @@ func main() {
 		defer locker.Close()
 		h := jobs.NewHandler(config)
 		h.VerifyConfig()
-		if err = h.VerifyRoles(); err == pg.UnexpctedRole {
+		if err = h.VerifyRoles(); err == pg.ErrUnexpectedRole {
 			log.Infof("%s", err)
 			locker.Close()
 			return
