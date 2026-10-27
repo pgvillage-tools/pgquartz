@@ -130,11 +130,11 @@ jobs:
             echo "No open pull request found for this branch."
           fi
       - name: create badge
+        if: github.ref_name == 'main'
         uses: vladopajic/go-test-coverage@v2
         with:
           profile: cover.out
-          threshold-total: 10
-          git-token: ${{ github.ref_name == 'main' && secrets.GITHUB_TOKEN || '' }}
+          git-token: ${{ secrets.GITHUB_TOKEN }}
           git-branch: badges
       - name: post coverage report
         if: env.pull_request_id
