@@ -72,7 +72,7 @@ func runKeeper(
 			strings.ReplaceAll(strings.ToUpper(k), "-", "_"))
 		envSettings[k] = v
 	}
-	image := fmt.Sprintf("%s/keeper-%s", orionImageRepo, pgVersion)
+	image := fmt.Sprintf("%s/keeper:%s", orionImageRepo, pgVersion)
 	fmt.Fprintf(GinkgoWriter, "DEBUG - Keeper image: %s", image)
 	return testcontainers.GenericContainer(
 		ctx, testcontainers.GenericContainerRequest{
