@@ -31,12 +31,12 @@ func TestConfig_Initialize(t *testing.T) {
 
 	assert.Equal(t, "origin", c.Remote, "Detect remote defaults to 'origin' after Initialize")
 	assert.Equal(t, "main", c.Revision, "Detect revision defaults to 'main' after Initialize")
-	if home, err := homedir.Dir(); err != nil {
+	home, err := homedir.Dir()
+	if err != nil {
 		panic(fmt.Sprintf("failed to expand homedir: %e", err))
-	} else {
-		assert.Regexp(t, regexp.MustCompile(fmt.Sprintf("^%s/.ssh/id_rsa", home)), c.RsaPath,
-			"Detect rsa path defaults to id_rsa in homedir after Initialize")
 	}
+	assert.Regexp(t, regexp.MustCompile(fmt.Sprintf("^%s/.ssh/id_rsa", home)), c.RsaPath,
+		"Detect rsa path defaults to id_rsa in homedir after Initialize")
 }
 
 func TestCloneCurDir(t *testing.T) {
@@ -60,12 +60,12 @@ func TestCloneCurDir(t *testing.T) {
 	assert.True(t, c.Path.IsGitRepo(), "Check if IsGitRepo works as expected (2)")
 
 	assert.Equal(t, Remote, c.Remote, "Detect remote defaults to 'origin' after Initialize")
-	if home, err := homedir.Dir(); err != nil {
+	home, err := homedir.Dir()
+	if err != nil {
 		panic(fmt.Sprintf("failed to expand homedir: %e", err))
-	} else {
-		assert.Regexp(t, regexp.MustCompile(fmt.Sprintf("^%s/.ssh/id_rsa", home)), c.RsaPath,
-			"Detect rsa path defaults to id_rsa in homedir after Initialize")
 	}
+	assert.Regexp(t, regexp.MustCompile(fmt.Sprintf("^%s/.ssh/id_rsa", home)), c.RsaPath,
+		"Detect rsa path defaults to id_rsa in homedir after Initialize")
 	assert.Nil(t, c.Checkout(EarlierRevision), ".Checkout should work for an earlier Revision")
 	assert.Nil(t, c.Checkout(LaterRevision), ".Checkout should work for a later Revision")
 }

@@ -1,11 +1,18 @@
 package git
 
 import (
+	"errors"
 	"fmt"
-	"go.uber.org/zap"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"go.uber.org/zap"
+)
+
+const (
+	testFileMode = 0o644
+	numTestTags  = 4
 )
 
 var (
@@ -15,7 +22,7 @@ var (
 	UnexpectedFolder Folder
 	InitiatedFolder  Folder
 	// Cannot simulate a situation that generates a UnknownFOlder situation
-	//UnknownFolder    Folder
+	// UnknownFolder    Folder
 )
 
 func TestMain(m *testing.M) {
@@ -36,7 +43,7 @@ func TestMain(m *testing.M) {
 
 func writeFile(fileName string, data string) error {
 	d1 := []byte(data)
-	return os.WriteFile(fileName, d1, 0644)
+	return os.WriteFile(fileName, d1, testFileMode)
 }
 
 func createTag(repo Folder, tag string, file string, data string) error {
@@ -63,7 +70,7 @@ func initRepo(repo Folder) error {
 		return err
 	}
 
-	for i := 1; i < 5; i++ {
+	for i := 1; i <= numTestTags; i++ {
 		if err := createTag(repo, fmt.Sprintf("tag%d", i), fmt.Sprintf("foo%d", i), "bar"); err != nil {
 			return err
 		}
@@ -72,12 +79,11 @@ func initRepo(repo Folder) error {
 }
 
 func setupTesting() error {
-	var err error
-	if fld, err := os.MkdirTemp("", "go_test_pgquartz"); err != nil {
-		return fmt.Errorf("failed to create rootfolder")
-	} else {
-		RootFolder = Folder(fld)
+	fld, err := os.MkdirTemp("", "go_test_pgquartz")
+	if err != nil {
+		return errors.New("failed to create rootfolder")
 	}
+	RootFolder = Folder(fld)
 	MissingFolder = Folder(filepath.Join(RootFolder.String(), "missing"))
 	if EmptyFolder, err = RootFolder.SubFolder("empty"); err != nil {
 		return err

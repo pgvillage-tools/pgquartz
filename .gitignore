@@ -2,3 +2,9 @@
 
 bin/
 docs/_build
+
+cover.out
+
+.vscode
+
+revive.toml

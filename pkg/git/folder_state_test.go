@@ -2,10 +2,11 @@ package git
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestInitiated(t *testing.T) {
@@ -74,7 +75,7 @@ func TestEmpty(t *testing.T) {
 }
 
 func TestUnexpected(t *testing.T) {
-	//Unexpected state means that folder has files, but is not a repo
+	// Unexpected state means that folder has files, but is not a repo
 	assert.True(t, strings.HasSuffix(UnexpectedFolder.String(), "/unexpected"), "folder should end with /unexpected")
 	assert.False(t, UnexpectedFolder.IsPrepared(), "InitedFolder should not have Prepared state")
 	empty, err := UnexpectedFolder.IsEmpty()

@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 
-	"github.com/mannemsolutions/PgQuartz/internal"
-	"github.com/mannemsolutions/PgQuartz/pkg/etcd"
-	"github.com/mannemsolutions/PgQuartz/pkg/jobs"
-	"github.com/mannemsolutions/PgQuartz/pkg/pg"
+	"github.com/pgvillage-tools/PgQuartz/internal"
+	"github.com/pgvillage-tools/PgQuartz/pkg/etcd"
+	"github.com/pgvillage-tools/PgQuartz/pkg/jobs"
+	"github.com/pgvillage-tools/PgQuartz/pkg/pg"
 )
 
 var (
@@ -26,36 +26,35 @@ func main() {
 	if config, err = internal.NewConfig(); err != nil {
 		initLogger("")
 		log.Fatal(err)
-	} else {
-		initLogger(config.LogFile)
-		initRemoteLoggers()
-		enableDebug(config.Debug)
-		config.Initialize()
-		defer log.Sync() //nolint:errcheck
-		if err = config.Git.Pull(); err != nil {
-			log.Infof("error while pulling git repo %s: %e", config.Workdir, err)
-		} else {
-			log.Debugf("git repo at %s updated, reapplying config", config.Workdir)
-			if config, err = internal.NewConfig(); err != nil {
-				log.Fatal(err)
-			}
-		}
-		initContext()
-		locker := etcd.NewEtcdLocker(config.EtcdConfig)
-		locker.Lock()
-		defer locker.Close()
-		h := jobs.NewHandler(config)
-		h.VerifyConfig()
-		if err = h.VerifyRoles(); err == pg.UnexpctedRole {
-			log.Infof("%s", err)
-			locker.Close()
-			return
-		} else if err != nil {
-			log.Panicf("error during role verification: %e", err)
-		}
-		h.RunSteps()
-		locker.Close()
-		h.RunChecks()
-		jobCtxCancelFunc()
 	}
+	initLogger(config.LogFile)
+	initRemoteLoggers()
+	enableDebug(config.Debug)
+	config.Initialize()
+	defer log.Sync() //nolint:errcheck
+	if err = config.Git.Pull(); err != nil {
+		log.Infof("error while pulling git repo %s: %e", config.Workdir, err)
+	} else {
+		log.Debugf("git repo at %s updated, reapplying config", config.Workdir)
+		if config, err = internal.NewConfig(); err != nil {
+			log.Fatal(err)
+		}
+	}
+	initContext()
+	locker := etcd.NewEtcdLocker(config.EtcdConfig)
+	locker.Lock()
+	defer locker.Close()
+	h := jobs.NewHandler(config)
+	h.VerifyConfig()
+	if err = h.VerifyRoles(); err == pg.ErrUnexpectedRole {
+		log.Infof("%s", err)
+		locker.Close()
+		return
+	} else if err != nil {
+		log.Panicf("error during role verification: %e", err)
+	}
+	h.RunSteps()
+	locker.Close()
+	h.RunChecks()
+	jobCtxCancelFunc()
 }

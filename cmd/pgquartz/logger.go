@@ -3,14 +3,16 @@ package main
 import (
 	"os"
 
-	"github.com/mannemsolutions/PgQuartz/pkg/git"
+	"github.com/pgvillage-tools/PgQuartz/pkg/git"
 
-	"github.com/mannemsolutions/PgQuartz/pkg/etcd"
-	"github.com/mannemsolutions/PgQuartz/pkg/jobs"
-	"github.com/mannemsolutions/PgQuartz/pkg/pg"
+	"github.com/pgvillage-tools/PgQuartz/pkg/etcd"
+	"github.com/pgvillage-tools/PgQuartz/pkg/jobs"
+	"github.com/pgvillage-tools/PgQuartz/pkg/pg"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
+
+const logFileMode = 0o644
 
 var (
 	log  *zap.SugaredLogger
@@ -18,7 +20,6 @@ var (
 )
 
 func initLogger(logFilePath string) {
-
 	atom = zap.NewAtomicLevel()
 	// First, define our level-handling logic.
 	highPriority := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
@@ -35,7 +36,7 @@ func initLogger(logFilePath string) {
 
 	// Optimize the Kafka output for machine consumption and the console output
 	// for human operators.
-	//encoderCfg := zap.NewDevelopmentEncoderConfig()
+	// encoderCfg := zap.NewDevelopmentEncoderConfig()
 	encoderCfg := zap.NewProductionEncoderConfig()
 	encoderCfg.EncodeTime = zapcore.RFC3339TimeEncoder
 	consoleEncoder := zapcore.NewConsoleEncoder(encoderCfg)
@@ -46,17 +47,17 @@ func initLogger(logFilePath string) {
 	if logFilePath != "" {
 		fileEncoder := zapcore.NewConsoleEncoder(encoderCfg)
 		// #nosec G304,G302 -- path from variable is ok in this case (pgquartz is run by a user with low OS permissions)
-		if logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); err != nil {
+		logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, logFileMode)
+		if err != nil {
 			initLogger("")
 			log.Panicf("error while opening logfile: %s", err)
-		} else {
-			writer := zapcore.AddSync(logFile)
-			core = zapcore.NewTee(
-				zapcore.NewCore(fileEncoder, writer, atom),
-				zapcore.NewCore(consoleEncoder, consoleErrors, highPriority),
-				zapcore.NewCore(consoleEncoder, consoleDebugging, lowPriority),
-			)
 		}
+		writer := zapcore.AddSync(logFile)
+		core = zapcore.NewTee(
+			zapcore.NewCore(fileEncoder, writer, atom),
+			zapcore.NewCore(consoleEncoder, consoleErrors, highPriority),
+			zapcore.NewCore(consoleEncoder, consoleDebugging, lowPriority),
+		)
 	} else {
 		core = zapcore.NewTee(
 			zapcore.NewCore(consoleEncoder, consoleErrors, highPriority),

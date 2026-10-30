@@ -39,19 +39,24 @@ func (sst stepState) String() string {
 	return stepStateString
 }
 
+// Steps maps step names to steps.
 type Steps map[string]*Step
 
+// InstanceFinished marks the step instance referenced by w as done.
 func (ss *Steps) InstanceFinished(w Work) {
-	if s, sExists := (*ss)[w.Step]; !sExists {
+	s, sExists := (*ss)[w.Step]
+	if !sExists {
 		log.Panicf("Unknown step %s is finished", w.Step)
-	} else if i, iExists := s.Instances[w.ArgKey]; !iExists {
-		log.Panicf("Unknown instance %s for step %s is finished", w.ArgKey, w.Step)
-	} else {
-		i.done = true
-		log.Debugf("Set instance [%s].[%s] to done", w.Step, w.ArgKey)
 	}
+	i, iExists := s.Instances[w.ArgKey]
+	if !iExists {
+		log.Panicf("Unknown instance %s for step %s is finished", w.ArgKey, w.Step)
+	}
+	i.done = true
+	log.Debugf("Set instance [%s].[%s] to done", w.Step, w.ArgKey)
 }
 
+// Verify checks all steps and their dependencies and returns the problems found.
 func (ss Steps) Verify(conns Connections) (errs []error) {
 	for stepName, step := range ss {
 		errs = append(errs, step.Commands.Verify(stepName, conns)...)
@@ -64,12 +69,14 @@ func (ss Steps) Verify(conns Connections) (errs []error) {
 	return errs
 }
 
+// Initialize sets up the instances of all steps.
 func (ss *Steps) Initialize() {
 	for _, step := range *ss {
 		step.Initialize()
 	}
 }
 
+// GetNumInstances returns the total number of instances of all steps.
 func (ss Steps) GetNumInstances() int {
 	var count int
 	for name, step := range ss {
@@ -82,6 +89,7 @@ func (ss Steps) GetNumInstances() int {
 	return count
 }
 
+// Clone returns an initialized copy of all steps.
 func (ss Steps) Clone() Steps {
 	clone := make(Steps)
 	for name, step := range ss {
@@ -93,15 +101,16 @@ func (ss Steps) Clone() Steps {
 }
 
 func (ss Steps) setStepState(stepName string, newState stepState) {
-	if step, exists := ss[stepName]; !exists {
+	step, exists := ss[stepName]
+	if !exists {
 		log.Panicf("Looking for a step %s that does not exist???", stepName)
-	} else if err := step.setState(newState); err != nil {
+	}
+	if err := step.setState(newState); err != nil {
 		log.Panicf("Error while changing state for step %s: %e", stepName, err)
-	} else {
-		step.state = newState
 	}
 }
 
+// GetReadySteps returns the names of the steps that are ready, or waiting with all dependencies done or skipped.
 func (ss Steps) GetReadySteps() (ready []string) {
 	var isReady bool
 	for stepName, step := range ss {
@@ -127,45 +136,47 @@ func (ss Steps) GetReadySteps() (ready []string) {
 	return ready
 }
 
+// NumWaiting returns the number of steps that are waiting.
 func (ss Steps) NumWaiting() (numWaiting int) {
 	for _, step := range ss {
 		if !step.Waiting() {
 			continue
 		}
-		numWaiting += 1
+		numWaiting++
 	}
 	return numWaiting
 }
 
+// CheckWhen evaluates the 'when' templates of a step and reports whether all of them return True.
 func (ss Steps) CheckWhen(all Handler, stepName string) (bool, error) {
-	var numChecks int
-	if step, exists := ss[stepName]; !exists {
+	step, exists := ss[stepName]
+	if !exists {
 		return false, fmt.Errorf("checking a 'when' on an undefined step %s", stepName)
-	} else {
-		numChecks = len(step.When)
-		for _, whenCheck := range step.When {
-			if !strings.Contains(whenCheck, "{{") || !strings.Contains(whenCheck, "}}") {
-				whenCheck = fmt.Sprintf("{{if %s }}True{{end}}", whenCheck)
-			}
-			if t, err := template.New("when").Parse(whenCheck); err != nil {
-				return false, err
-			} else {
-				log.Debugf("Processing WhenCheck '%s' for step %s", whenCheck, stepName)
-				var parsed bytes.Buffer
-				err = t.Execute(&parsed, all)
-				log.Debugf("WhenCheck '%s' returned %s for step %s", whenCheck, parsed.String(), stepName)
-				if err != nil {
-					return false, err
-				} else if parsed.String() != "True" {
-					return false, nil
-				}
-			}
+	}
+	numChecks := len(step.When)
+	for _, whenCheck := range step.When {
+		if !strings.Contains(whenCheck, "{{") || !strings.Contains(whenCheck, "}}") {
+			whenCheck = fmt.Sprintf("{{if %s }}True{{end}}", whenCheck)
+		}
+		t, err := template.New("when").Parse(whenCheck)
+		if err != nil {
+			return false, err
+		}
+		log.Debugf("Processing WhenCheck '%s' for step %s", whenCheck, stepName)
+		var parsed bytes.Buffer
+		err = t.Execute(&parsed, all)
+		log.Debugf("WhenCheck '%s' returned %s for step %s", whenCheck, parsed.String(), stepName)
+		if err != nil {
+			return false, err
+		} else if parsed.String() != "True" {
+			return false, nil
 		}
 	}
 	log.Debugf("All %d WhenChecks for step %s are OK", numChecks, stepName)
 	return true, nil
 }
 
+// Step is a set of commands that is run for every combination of its matrix arguments.
 type Step struct {
 	Commands  Commands `yaml:"commands"`
 	Depends   []string `yaml:"depends,omitempty"`
@@ -175,14 +186,17 @@ type Step struct {
 	Instances Instances  `yaml:"-"`
 }
 
+// Waiting reports whether the step is waiting to be scheduled.
 func (s Step) Waiting() bool {
 	return s.state == stepStateWaiting
 }
 
+// Ready reports whether the step is ready to be scheduled.
 func (s Step) Ready() bool {
 	return s.state == stepStateReady
 }
 
+// Done reports whether the step is done, and marks it done when all its instances are done.
 func (s *Step) Done() bool {
 	if s.state == stepStateDone {
 		return true
@@ -196,28 +210,29 @@ func (s *Step) Done() bool {
 	return false
 }
 
+// InstanceFinished marks an instance as done and reports whether the step is done.
 func (s *Step) InstanceFinished(instance string) bool {
 	if s.Done() {
 		log.Fatalf("calling instanceFinished on a step that is already finished")
 	}
-	log.Debugf("instance done: %s", s.Instances[instance].Name())
-	if i, exists := s.Instances[instance]; !exists {
+	i, exists := s.Instances[instance]
+	if !exists {
 		log.Fatalf("calling instanceFinished on an instance that does not exist")
-	} else {
-		i.done = true
 	}
+	log.Debugf("instance done: %s", i.Name())
+	i.done = true
 	return s.Done()
 }
 
 func (s *Step) setState(newState stepState) error {
 	if s.state > newState {
 		return fmt.Errorf("invalid step transition from %s to %s", s.state.String(), newState.String())
-	} else {
-		s.state = newState
-		return nil
 	}
+	s.state = newState
+	return nil
 }
 
+// Clone returns a copy of the step in the waiting state.
 func (s Step) Clone() *Step {
 	return &Step{
 		Commands:  s.Commands.Clone(),
@@ -229,22 +244,27 @@ func (s Step) Clone() *Step {
 	}
 }
 
+// StdOut returns the combined stdout of all instances of the step.
 func (s Step) StdOut() Result {
 	return s.Instances.StdOut()
 }
 
+// StdErr returns the combined stderr of all instances of the step.
 func (s Step) StdErr() Result {
 	return s.Instances.StdErr()
 }
 
+// Rc returns the sum of the return codes of all instances of the step.
 func (s Step) Rc() int {
 	return s.Instances.Rc()
 }
 
+// Initialize sets up the instances of the step.
 func (s *Step) Initialize() {
 	s.SetInstances()
 }
 
+// SetInstances creates an instance for every combination of matrix arguments, unless instances already exist.
 func (s *Step) SetInstances() {
 	if len(s.Instances) > 0 {
 		return
@@ -255,7 +275,8 @@ func (s *Step) SetInstances() {
 	}
 }
 
+// GetInstances returns the instances of the step.
 func (s Step) GetInstances() Instances {
-	//log.Debugf("Instances: %s", s.Instances.String())
+	// log.Debugf("Instances: %s", s.Instances.String())
 	return s.Instances
 }

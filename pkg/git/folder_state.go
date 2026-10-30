@@ -10,8 +10,10 @@ import (
 	"strings"
 )
 
+// Folder is a path to a local folder that can hold a git repository.
 type Folder string
 
+// FolderState describes the state of a Folder.
 type FolderState int
 
 const (
@@ -21,6 +23,8 @@ const (
 	folderInitiated  FolderState = iota
 	folderUnknown    FolderState = iota
 )
+
+const folderMode = 0o775
 
 func (gf Folder) _RunGitCommand(command []string) (string, string, error) {
 	stdOut := new(bytes.Buffer)
@@ -34,6 +38,8 @@ func (gf Folder) _RunGitCommand(command []string) (string, string, error) {
 	return stdOut.String(), stdErr.String(), err
 }
 
+// SubFolder creates a new sub folder with the given name and returns it.
+// It returns an error if the sub folder already exists.
 func (gf Folder) SubFolder(name string) (Folder, error) {
 	subFolder := Folder(filepath.Join(gf.String(), name))
 	if exists, err := subFolder.Exists(); err != nil {
@@ -41,7 +47,7 @@ func (gf Folder) SubFolder(name string) (Folder, error) {
 	} else if exists {
 		return "", fmt.Errorf("folder %s already exists", subFolder)
 	}
-	if err := os.MkdirAll(subFolder.String(), 0775); err != nil {
+	if err := os.MkdirAll(subFolder.String(), folderMode); err != nil {
 		return "", err
 	}
 	return subFolder, nil
@@ -51,6 +57,7 @@ func (gf Folder) String() string {
 	return string(gf)
 }
 
+// RunGitCommand runs git with the given arguments in the folder and logs its output on failure.
 func (gf Folder) RunGitCommand(command []string) error {
 	stdout, stderr, err := gf._RunGitCommand(command)
 	if err != nil {
@@ -60,45 +67,49 @@ func (gf Folder) RunGitCommand(command []string) error {
 	return err
 }
 
+// GetCommit returns the commit hash for the given revision, or an empty string if it cannot be resolved.
 func (gf Folder) GetCommit(revision string) string {
 	if !gf.IsGitRepo() {
 		log.Errorf("folder %s is not a git repo", gf)
 		return ""
 	}
-	if out, _, err := gf._RunGitCommand([]string{"rev-list", "-n", "1", revision}); err != nil {
+	out, _, err := gf._RunGitCommand([]string{"rev-list", "-n", "1", revision})
+	if err != nil {
 		log.Error("Error occured while retrieving commit %s: %e", revision, err)
 		return ""
-	} else {
-		return strings.TrimSpace(out)
 	}
+	return strings.TrimSpace(out)
 }
 
 // IsGitRepo checks if the folder is already initialized as a git repo
 func (gf Folder) IsGitRepo() bool {
-	if out, _, err := gf._RunGitCommand([]string{"rev-parse", "--is-inside-work-tree"}); err != nil {
+	out, _, err := gf._RunGitCommand([]string{"rev-parse", "--is-inside-work-tree"})
+	if err != nil {
 		return false
-	} else {
-		return strings.TrimSpace(out) == "true"
 	}
+	return strings.TrimSpace(out) == "true"
 }
 
 // Exists checks if the folder exists (which coud then still be empty
 func (gf Folder) Exists() (bool, error) {
-	if _, err := os.Stat(string(gf)); err == nil {
+	_, err := os.Stat(string(gf))
+	if err == nil {
 		return true, nil
-	} else if os.IsNotExist(err) {
-		return false, nil
-	} else {
-		return false, err
 	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
 }
 
+// IsEmpty checks if the folder has no entries.
 func (gf Folder) IsEmpty() (bool, error) {
 	f, err := os.Open(string(gf))
 	if err != nil {
 		return false, err
 	}
-	defer f.Close()
+	// TODO: In the future we probably want the logger and log on error
+	defer func() { _ = f.Close() }()
 
 	_, err = f.Readdirnames(1) // Or f.Readdir(1)
 	if err == io.EOF {
@@ -132,6 +143,7 @@ func (gf Folder) state() FolderState {
 	return folderUnexpected
 }
 
+// IsPrepared checks if the folder is initialized as a git repo.
 func (gf Folder) IsPrepared() bool {
 	return gf.state() == folderInitiated
 }

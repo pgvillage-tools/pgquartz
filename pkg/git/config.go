@@ -1,6 +1,7 @@
 package git
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,9 +11,11 @@ import (
 )
 
 const (
+	// LF is the line feed character.
 	LF byte = 10
 )
 
+// Config holds the settings of the git repository that contains the job definition.
 type Config struct {
 	Path         Folder `yaml:"dir"`
 	URL          string `yaml:"url"`
@@ -39,17 +42,18 @@ func (gc *Config) Initialize(workdir Folder) {
 		gc.RsaPath = "~/.ssh/id_rsa"
 	}
 	if strings.HasPrefix(gc.RsaPath, "~/") {
-		if home, err := homedir.Dir(); err != nil {
+		home, err := homedir.Dir()
+		if err != nil {
 			panic(fmt.Sprintf("failed to expand homedir: %e", err))
-		} else {
-			gc.RsaPath = filepath.Join(home, gc.RsaPath[2:])
 		}
+		gc.RsaPath = filepath.Join(home, gc.RsaPath[2:])
 	}
 }
 
+// Checkout checks out the given revision in the repository.
 func (gc *Config) Checkout(revision string) error {
 	if gc.Disable {
-		return fmt.Errorf("git pull functionality is disabled")
+		return errors.New("git pull functionality is disabled")
 	}
 	log.Debug("git checkout")
 	currentCommit := gc.Path.GetCommit("HEAD")
@@ -66,12 +70,14 @@ func (gc *Config) Checkout(revision string) error {
 	} else if err := gc.Path.RunGitCommand([]string{"checkout", revision}); err != nil {
 		return err
 	} else if gc.Path.GetCommit("HEAD") != wantedCommit {
-		return fmt.Errorf("revision (%s => %s) not as expected (%s) after checkout", gc.Revision, wantedCommit, currentCommit)
+		return fmt.Errorf("revision (%s => %s) not as expected (%s) after checkout",
+			gc.Revision, wantedCommit, currentCommit)
 	}
 	gc.Revision = revision
 	return nil
 }
 
+// Clean removes untracked files and reverts local changes in the repository.
 func (gc Config) Clean() error {
 	if err := gc.Path.RunGitCommand([]string{"clean", "-f"}); err != nil {
 		return err
@@ -79,15 +85,13 @@ func (gc Config) Clean() error {
 	if err := gc.Path.RunGitCommand([]string{"restore", "--staged", "."}); err != nil {
 		return err
 	}
-	if err := gc.Path.RunGitCommand([]string{"restore", "."}); err != nil {
-		return err
-	}
-	return nil
+	return gc.Path.RunGitCommand([]string{"restore", "."})
 }
 
+// Clone clones the repository and checks out the configured revision, or pulls if it is already cloned.
 func (gc Config) Clone() error {
 	if gc.Disable {
-		return fmt.Errorf("git pull functionality is disabled")
+		return errors.New("git pull functionality is disabled")
 	}
 	if gc.Path.IsPrepared() {
 		log.Debug("Repo already is cloned, pulling instead")
@@ -112,9 +116,10 @@ func (gc Config) Clone() error {
 	return gc.Checkout(gc.Revision)
 }
 
+// Pull cleans the repository, checks out the configured revision and pulls the latest changes.
 func (gc Config) Pull() error {
 	if gc.Disable {
-		return fmt.Errorf("git pull functionality is disabled")
+		return errors.New("git pull functionality is disabled")
 	}
 	if err := gc.Clean(); err != nil {
 		return err

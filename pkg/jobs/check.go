@@ -8,22 +8,23 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 )
 
+// Checks is a list of Check pointers
 type Checks []*Check
 
+// Run is executed to run all Checks in a Checks resource
 func (cs *Checks) Run(conns Connections) {
 	for _, check := range *cs {
 		for _, args := range check.Matrix.Instances() {
 			if err := check.Run(conns, args); err != nil {
 				log.Fatalf("Check [%s] failed: %e", check.String(), err)
 			}
-
 		}
 	}
 }
 
+// Clone will clone a Checks list
 func (cs Checks) Clone() (clone Checks) {
 	for _, c := range cs {
 		clone = append(clone, c.Clone())
@@ -31,6 +32,7 @@ func (cs Checks) Clone() (clone Checks) {
 	return clone
 }
 
+// Check is a shell script or query that verifies the result of a job.
 type Check struct {
 	// Home (~) is not resolved
 	File       string     `yaml:"file,omitempty"`
@@ -46,6 +48,7 @@ type Check struct {
 	tmpFile    string
 }
 
+// Clone returns a copy of the check.
 func (c Check) Clone() *Check {
 	return &Check{
 		Name:       c.Name,
@@ -71,6 +74,7 @@ func (c Check) String() string {
 	return fmt.Sprintf("name='%s', type=%s, %s", strings.Replace(c.Name, "'", "''", -1), c.Type, chk)
 }
 
+// VerifyScriptFile checks that the script file of a shell check exists and is executable.
 func (c Check) VerifyScriptFile() (err error) {
 	if c.Inline != "" {
 		return nil
@@ -78,40 +82,26 @@ func (c Check) VerifyScriptFile() (err error) {
 	if c.Type != "shell" {
 		return nil
 	}
-	// Check file exists
-	if info, err := os.Stat(c.File); err != nil {
-		return err
-	} else {
-		// Check file is executable by me
-		// Requires a fix for Windows...
-		mode := info.Mode()
-		stat := info.Sys().(*syscall.Stat_t)
-		if mode&0001 != 0 {
-			return nil
-		} else if mode&0100 != 0 && int(stat.Uid) == os.Getuid() {
-			return nil
-		} else if mode&0010 != 0 && int(stat.Gid) == os.Getgid() {
-			return nil
-		}
-		return fmt.Errorf("script file %s is not executable by me (uid: %d, gid: %d)", c.File, os.Getuid(),
-			os.Getgid())
-	}
+	return verifyScriptFile(c.File)
 }
 
+// Verify checks the check against the defined connections and returns the problems found.
 func (c Check) Verify(stepName string, conns Connections) (errs []error) {
-	if c.Type == "" {
-		if len(conns) == 1 {
-			// This is fine. When only one, we use that.
-		} else {
+	switch c.Type {
+	case "":
+		// This is fine when only one connection is defined. We use that one.
+		if len(conns) != 1 {
 			errs = append(errs, fmt.Errorf(
 				"please reference a specific Type for step check %s.%s, or just define only one Connection",
 				stepName, c.Name))
 		}
-	} else if c.Type == "shell" {
+	case "shell":
 		// Special type shell for running shell checks instead of db connection
-	} else if _, exists := conns[c.Type]; !exists {
-		errs = append(errs, fmt.Errorf("step check %s.%s references an unknown Type %s", stepName,
-			c.Type, c.Name))
+	default:
+		if _, exists := conns[c.Type]; !exists {
+			errs = append(errs, fmt.Errorf("step check %s.%s references an unknown Type %s", stepName,
+				c.Type, c.Name))
+		}
 	}
 	if err := c.VerifyScriptFile(); err != nil {
 		errs = append(errs, err)
@@ -136,7 +126,7 @@ func (c *Check) ScriptFile() (scriptFile string) {
 		} else if err = tmpFile.Close(); err != nil {
 			log.Panicf("error closing the tmpfile: %e", err)
 			// os.Chmod should also work on Windows
-		} else if err = os.Chmod(tmpFile.Name(), 0600); err != nil {
+		} else if err = os.Chmod(tmpFile.Name(), tmpFileMode); err != nil {
 			log.Panicf("error making inline tempfile script executable: %e", err)
 		}
 		return c.tmpFile
@@ -165,6 +155,7 @@ func (c Check) ScriptBody() (string, error) {
 	return string(scriptBodyBytes), nil
 }
 
+// Run runs the check and returns an error if the output or return code is not as expected.
 func (c *Check) Run(conns Connections, args InstanceArguments) error {
 	log.Infof("Running check: %s, with arguments %s", c.String(), args.String())
 	if c.Type == "" || c.Type == "shell" {
@@ -182,6 +173,7 @@ func (c *Check) Run(conns Connections, args InstanceArguments) error {
 	return nil
 }
 
+// CleanTempFile removes the temporary file created for an inline script.
 func (c *Check) CleanTempFile() {
 	if c.tmpFile != "" {
 		log.Debugf("removing tmp file %s", c.tmpFile)
@@ -192,6 +184,8 @@ func (c *Check) CleanTempFile() {
 	}
 }
 
+// CheckOutput verifies that the output contains expected and does not contain unexpected.
+// Empty strings are not checked.
 func CheckOutput(stdOut Result, expected string, unexpected string) error {
 	stdout := NewResultFromString(stdOut.String())
 	if expected != "" && !stdout.Contains(expected) {
@@ -202,6 +196,7 @@ func CheckOutput(stdOut Result, expected string, unexpected string) error {
 	return nil
 }
 
+// RunOsCheck runs the check as a bash script and verifies its return code and output.
 func (c *Check) RunOsCheck(args InstanceArguments) (err error) {
 	exCheck := exec.Command("/bin/bash", c.ScriptFile()) // #nosec
 	exCheck.Env = args.AsEnv()

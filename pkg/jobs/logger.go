@@ -9,6 +9,7 @@ var (
 	atom zap.AtomicLevel
 )
 
+// InitLogger sets the logger and log level used by this package.
 func InitLogger(logger *zap.SugaredLogger, level zap.AtomicLevel) {
 	log = logger
 	atom = level

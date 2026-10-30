@@ -1,20 +1,21 @@
 package git
 
 import (
-	//"context"
+	// "context"
 
 	"go.uber.org/zap"
 )
 
 var (
 	log *zap.SugaredLogger
-	//ctx context.Context
+	// ctx context.Context
 )
 
+// InitLogger sets the logger used by this package.
 func InitLogger(logger *zap.SugaredLogger) {
 	log = logger
 }
 
-//func InitContext(c context.Context) {
-//	ctx = c
-//}
+// func InitContext(c context.Context) {
+// 	ctx = c
+// }
