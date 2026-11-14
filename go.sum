@@ -299,8 +299,8 @@ github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWD
 github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
 github.com/testcontainers/testcontainers-go v0.45.0 h1:ss9Stm9KDX6JLgGL4jr2fC5dwpabTbCBsRcGadBPR9k=
 github.com/testcontainers/testcontainers-go v0.45.0/go.mod h1:VMJZ7M+qhgfEHWNbtjm596OyEOraULSTDaus/h0hmJI=
-github.com/testcontainers/testcontainers-go/modules/etcd v0.44.0 h1:5EJnJCUdSKTSKmTji/Wgu9g1Fj8lwIbz8kdwgBcKHHY=
-github.com/testcontainers/testcontainers-go/modules/etcd v0.44.0/go.mod h1:VDtHLTbW7dMf2/W57Ws/91fuiJpjyI1xiwd3IKs8jlo=
+github.com/testcontainers/testcontainers-go/modules/etcd v0.45.0 h1:yYDT3rUctxeGdD4ThDNchFAoXj/Qf4d5ulMPhuXvRGI=
+github.com/testcontainers/testcontainers-go/modules/etcd v0.45.0/go.mod h1:64pFb/hiNm/kj9xpynlhBQ5aPtQATDhCkpucHAz1r70=
 github.com/tidwall/gjson v1.18.0 h1:FIDeeyB800efLX89e5a8Y0BNH+LOngJyGrIWxG2FKQY=
 github.com/tidwall/gjson v1.18.0/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
 github.com/tidwall/match v1.1.1 h1:+Ho715JplO36QYgwN9PGYNhgZvoUSc9X2c80KVTi+GA=
